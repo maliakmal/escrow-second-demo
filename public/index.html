@@ -197,11 +197,11 @@ async function fetchTransactions() {
     if(action == 'disbursement_methods'){
       const res = await fetch(`/api/transaction/${transactionId}/disbursement`, { method: 'POST' });
     }else if(action == 'fund'){
-      const res = await fetch(`/api/fund/transaction/${transactionId}`, { method: 'POST' });
+      const res = await fetch(`/api/fund/${transactionId}`, { method: 'POST' });
     }else if(action == 'agree'){
       const res = await fetch(`/api/transaction/${transactionId}/agree`, { method: 'GET' });
     }else{
-      const res = await fetch(`/api/action/transaction/${transactionId}/${action}`, { method: 'POST' });
+      const res = await fetch(`/api/action/${transactionId}/${action}`, { method: 'POST' });
     }
 
     const msg = await res.text();

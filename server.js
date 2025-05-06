@@ -60,21 +60,6 @@ app.post('/api/payment', async (req, res) => {
   }
 });
 
-// Release payment
-app.post('/api/release', async (req, res) => {
-  const { transactionId } = req.body;
-  try {
-    const result = await fetch(`${process.env.ESCROW_BASE_URL}/transaction/${transactionId}/action/release`, {
-      method: 'POST',
-      headers: HEADERS
-    });
-    const data = await result.json();
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error releasing payment");
-  }
-});
 
 app.get('/api/transactions', async (req, res) => {
   try {
@@ -294,29 +279,6 @@ app.post('/api/fund/transaction/:id', async (req, res) => {
   }
 });
 
-
-// RELEASE a payment
-app.post('/api/release/:id', async (req, res) => {
-  const transactionId = req.params.id;
-
-  try {
-    const response = await fetch(`${process.env.ESCROW_BASE_URL}/2017-09-01/transaction/${transactionId}/release`, {
-      method: 'POST',
-      headers: HEADERS
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Release error:", data);
-      return res.status(400).json({ error: "Failed to release funds", details: data });
-    }
-
-    res.json({ message: "Payment released", data });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 // CANCEL a payment
 app.post('/api/cancel/:id', async (req, res) => {
