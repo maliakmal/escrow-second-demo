@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Escrow Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .toast-enter {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  .toast-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: all 0.3s ease;
+  }
+
+  .opacity-0 {
+    opacity: 0 !important;
+  }
+</style>
+
+</head>
+<body>
+
+<div class="container mx-auto mt-10">
+  <h2 class="text-2xl font-bold mb-4">All Transactions</h2>
+<a href="/create.html" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4">
+  ➕ Create New Payment
+</a>
+
+  <button onclick="fetchTransactions()" class="mb-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+    Refresh Transactions
+  </button>
+  <table class="w-full table-auto border border-gray-300">
+    <thead>
+      <tr class="bg-gray-100 text-left">
+        <th class="p-2">ID</th>
+        <th class="p-2">Description</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Amount</th>
+        <th class="p-2">Buyer</th>
+        <th class="p-2">Seller</th>
+        <th class="p-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="transactionsTable" class="text-sm">
+
+    <!-- rows go here -->
+  </tbody>
+</table>
+</div>
+
+  <pre id="output"></pre>
+
+  <script>
+    async function makePayment() {
+      const payer = document.getElementById('payer').value;
+      const payee = document.getElementById('payee').value;
+      const amount = document.getElementById('amount').value;
+      const res = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payerEmail: payer, payeeEmail: payee, amount })
+      });
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function releasePayment() {
+      const transactionId = document.getElementById('transactionId').value;
+      const res = await fetch('/api/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId })
+      });
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function cancelPayment() {
+      const transactionId = document.getElementById('transactionId').value;
+      const res = await fetch('/api/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId })
+      });
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+
+<script>
+function showButtons(transaction){
+  if(checkAllPartiesAgreed(transaction)){
+
+      if(transaction.items[0].schedule[0].status.payment_sent == true){
+        if(transaction.items[0].schedule[0].status.payment_received == true  && transaction.items[0].status.shipped ==  true){
+
+          if(transaction.items[0].status.accepted == true){
+            return false;
+          }
+        } 
+      }
+
+  }
+
+  return true;
+
+}
+function getNextActionFromStatus(status, transaction) {
+
+  if(checkAllPartiesAgreed(transaction)){
+
+    if(transaction.items[0].schedule[0].status.payment_received == true  && transaction.items[0].status.shipped ==  true){
+
+      if(transaction.items[0].status.accepted == true){
+        return { action: false };
+      }
+      return { label: 'Accept', action: 'accept' };
+    } 
+    return { label: 'Fund', action: 'fund' };
+
+  }
+
+  return { label: 'Agree', action: 'agree' };
+
+  if(status.secured ==  true){
+  } 
+  if(status.payment_received ==  true){
+      return { label: 'Ship', action: 'ship' };
+  } 
+  if(status.payment_received ==  true){
+      return { label: 'Ship', action: 'ship' };
+  } 
+
+}
+
+async function fetchTransactions() {
+  const res = await fetch('/api/transactions');
+  const json = await res.json();
+  const data = json.transactions || [];
+
+  const tbody = document.getElementById('transactionsTable');
+  tbody.innerHTML = '';
+
+  data.forEach(tx => {
+    const buyer = tx.parties.find(p => p.role === 'buyer')?.customer || '—';
+    const seller = tx.parties.find(p => p.role === 'seller')?.customer || '—';
+    const amount = tx.items?.[0]?.schedule?.[0]?.amount || '—';
+
+    const row = document.createElement('tr');
+    row.className = 'border-b';
+    const scheduleStatus = tx.items[0].schedule[0].status;
+    const actionButton = getNextActionFromStatus(scheduleStatus, tx);
+
+    row.innerHTML = `
+      <td class="p-2">${tx.id}</td>
+      <td class="p-2">${tx.description}</td>
+      <td class="p-2 font-bold text-${tx.status === 'completed' ? 'green' : tx.status === 'cancelled' ? 'red' : 'blue'}-600">
+        ${tx.status}
+      </td>
+      <td class="p-2">${amount}</td>
+      <td class="p-2">${buyer}</td>
+      <td class="p-2">${seller}</td>`;
+      row.innerHTML += `
+  <td class="p-2 space-x-2">
+    ${
+      actionButton.action
+        ? `<button onclick="handleAction('${tx.id}', '${actionButton.action}')" 
+            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+            ${actionButton.label}
+          </button><button onclick="handleAction('${tx.id}', 'cancel')" 
+      class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">
+      Cancel
+    </button>`
+        : ''
+    }
+    
+  </td>
+`;
+
+    tbody.appendChild(row);
+  });
+}
+
+
+  function checkAllPartiesAgreed(transaction) {
+    // Check if all parties have agreed: true
+    return transaction.parties.every(party => party.agreed === true);
+  }
+
+  async function handleAction(transactionId, action) {
+    const confirmed = confirm(`ARE YOU SURE YOU GONNA DO THIS? This will ${action.toUpperCase()} the transaction.`);
+    if (!confirmed) return;
+
+    if(action == 'disbursement_methods'){
+      const res = await fetch(`/api/transaction/${transactionId}/disbursement`, { method: 'POST' });
+    }else if(action == 'fund'){
+      const res = await fetch(`/api/fund/transaction/${transactionId}`, { method: 'POST' });
+    }else if(action == 'agree'){
+      const res = await fetch(`/api/transaction/${transactionId}/agree`, { method: 'GET' });
+    }else{
+      const res = await fetch(`/api/action/transaction/${transactionId}/${action}`, { method: 'POST' });
+    }
+
+    const msg = await res.text();
+    showToast(`${action.toUpperCase()} result: ${msg}`);
+    fetchTransactions();
+  }
+
+  function showToast(message, type = "success") {
+    const container = document.getElementById("toast-container");
+
+    const toast = document.createElement("div");
+    toast.className = `px-4 py-2 rounded shadow text-white transition-opacity duration-500 ease-in-out ${
+      type === "success" ? "bg-green-600" : "bg-red-600"
+    }`;
+
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("opacity-0");
+      setTimeout(() => container.removeChild(toast), 500);
+    }, 3000);
+  }
+
+fetchTransactions();
+
+</script>
+<div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
+
+</body>
+</html>
