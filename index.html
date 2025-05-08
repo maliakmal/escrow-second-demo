@@ -50,68 +50,25 @@
   </tbody>
 </table>
 </div>
-
-  <pre id="output"></pre>
-
-  <script>
-    async function makePayment() {
-      const payer = document.getElementById('payer').value;
-      const payee = document.getElementById('payee').value;
-      const amount = document.getElementById('amount').value;
-      const res = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payerEmail: payer, payeeEmail: payee, amount })
-      });
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function releasePayment() {
-      const transactionId = document.getElementById('transactionId').value;
-      const res = await fetch('/api/release', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId })
-      });
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function cancelPayment() {
-      const transactionId = document.getElementById('transactionId').value;
-      const res = await fetch('/api/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId })
-      });
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-    }
-  </script>
-
+<pre id="output"></pre>
 <script>
 function showButtons(transaction){
   if(checkAllPartiesAgreed(transaction)){
+    if(transaction.items[0].schedule[0].status.payment_sent == true){
+      if(transaction.items[0].schedule[0].status.payment_received == true  && transaction.items[0].status.shipped ==  true){
 
-      if(transaction.items[0].schedule[0].status.payment_sent == true){
-        if(transaction.items[0].schedule[0].status.payment_received == true  && transaction.items[0].status.shipped ==  true){
-
-          if(transaction.items[0].status.accepted == true){
-            return false;
-          }
-        } 
-      }
-
+        if(transaction.items[0].status.accepted == true){
+          return false;
+        }
+      } 
+    }
   }
-
   return true;
-
 }
+
 function getNextActionFromStatus(status, transaction) {
 
   if(checkAllPartiesAgreed(transaction)){
-
     if(transaction.items[0].schedule[0].status.payment_received == true  && transaction.items[0].status.shipped ==  true){
 
       if(transaction.items[0].status.accepted == true){
@@ -120,7 +77,6 @@ function getNextActionFromStatus(status, transaction) {
       return { label: 'Accept', action: 'accept' };
     } 
     return { label: 'Fund', action: 'fund' };
-
   }
 
   return { label: 'Agree', action: 'agree' };
@@ -194,63 +150,66 @@ async function fetchTransactions() {
 }
 
 
-  function checkAllPartiesAgreed(transaction) {
-    // Check if all parties have agreed: true
-    return transaction.parties.every(party => party.agreed === true);
-  }
+function checkAllPartiesAgreed(transaction) {
+  // Check if all parties have agreed: true
+  return transaction.parties.every(party => party.agreed === true);
+}
 
   async function handleAction(transactionId, action) {
     const confirmed = confirm(`ARE YOU SURE YOU GONNA DO THIS? This will ${action.toUpperCase()} the transaction.`);
     if (!confirmed) return;
+    
+    switch(action){
 
-    if(action == 'disbursement_methods'){
-      const res =  await fetch('/api/actions',  {
-        method: 'PATCH', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body:{
-          action: 'disbursement',
-          transaction_id: transactionId
-        }
-      });
+      case 'disbursement_methods': {
+        const res =  await fetch('/api/actions',  {
+          method: 'PATCH', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body:{
+            action: 'disbursement',
+            transaction_id: transactionId
+          }
+        });
+        break;
+      case 'fund':
+        const res =  await fetch('/api/actions',  {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body:{
+            action: 'fund',
+            transaction_id: transactionId
+          }
+        });
 
-
-    }else if(action == 'fund'){
-      const res =  await fetch('/api/actions',  {
-        method: 'POST', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body:{
-          action: 'fund',
-          transaction_id: transactionId
-        }
-      });
-
-
-    }else if(action == 'agree'){
-      const res =  await fetch('/api/actions',  {
-        method: 'PATCH', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body:{
-          action: 'agree',
-          transaction_id: transactionId
-        }
-      });
-    }else{
-      const res =  await fetch('/api/actions',  {
-        method: 'PATCH', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body:{
-          action: action,
-          transaction_id: transactionId
-        }
-      });
+        break;
+      case 'agree':
+        const res =  await fetch('/api/actions',  {
+          method: 'PATCH', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body:{
+            action: 'agree',
+            transaction_id: transactionId
+          }
+        });
+        break;
+      default:
+        const res =  await fetch('/api/actions',  {
+          method: 'PATCH', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body:{
+            action: action,
+            transaction_id: transactionId
+          }
+        });
+      break;
     }
 
     const msg = await res.text();
