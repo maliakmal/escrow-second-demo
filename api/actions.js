@@ -8,8 +8,7 @@ const HEADERS = {
 
 // action: payment
 async function handlePayment(body, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-  const { amount, payerEmail, payeeEmail } = req.body;
+  const { amount, payerEmail, payeeEmail } = body;
 
   try {
     const response = await fetch(`${process.env.ESCROW_BASE_URL}/transaction`, {
@@ -48,9 +47,8 @@ async function handlePayment(body, res) {
 
 // action: agree, disbursement
 async function handleDefault(body, res){
-  if (req.method !== 'PATCH') return res.status(405).end();
 
-  const { action, transaction_id } = req.body;
+  const { action, transaction_id } = body;
 
   try {
     const response = await fetch(`${process.env.ESCROW_BASE_URL}/transaction/${transaction_id}/${action}`, {
@@ -67,9 +65,8 @@ async function handleDefault(body, res){
 
 // action: fund
 async function handleFund(body, res){
-  if (req.method !== 'POST') return res.status(405).end();
 
-  const { action, transaction_id } = req.body;
+  const { action, transaction_id } = body;
 
   try {
     const response = await fetch(`${process.env.ESCROW_BASE_URL}/transaction/${transaction_id}/payment_methods/wire_transfer`, {
@@ -102,15 +99,15 @@ async function handleTransaction(body, res){
 
 // api/actions
 export default async function actionsHandler(req, res) {
+
   const { method, body } = req;
   const action = body?.action || 'default';
 
   try {
     switch (action) {
+      case 'transactions':
       case 'transaction':
         return await handleTransaction(body, res);
-      case 'fund':
-        return await handleFund(body, res);
       case 'fund':
         return await handleFund(body, res);
       case 'payment':
