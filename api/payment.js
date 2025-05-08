@@ -7,7 +7,7 @@ const HEADERS = {
 };
 
 // api/payment.js
-export async function paymentHandler(req, res) {
+export default async function paymentHandler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { amount, payerEmail, payeeEmail } = req.body;
 

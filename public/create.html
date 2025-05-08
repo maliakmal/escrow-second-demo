@@ -41,10 +41,12 @@
       const payeeEmail = document.getElementById('payeeEmail').value;
       const amount = document.getElementById('amount').value;
 
-      const res = await fetch('/api/payment', {
+      const res = await fetch('/api/actions', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ payerEmail, payeeEmail, amount })
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ payerEmail, payeeEmail, amount, action: 'payment' })
       });
 
       const data = await res.json();

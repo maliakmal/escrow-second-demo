@@ -7,7 +7,7 @@ const HEADERS = {
 };
 
 // api/fundTransaction.js
-export async function fundHandler(req, res) {
+export default async function fundHandler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { transactionId } = req.body;
 

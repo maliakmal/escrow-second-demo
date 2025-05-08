@@ -7,8 +7,9 @@ const HEADERS = {
 };
 
 // api/transactions.js
-export async function transactionsHandler(req, res) {
-  if (req.method !== 'GET') return res.status(405).end();
+export default async function transactionsHandler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
+  const { id } = req.body;
 
   try {
     const response = await fetch(`${process.env.ESCROW_BASE_URL}/transaction/${id}/payment_methods/wire_transfer`, {

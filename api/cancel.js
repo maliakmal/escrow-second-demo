@@ -7,7 +7,7 @@ const HEADERS = {
 };
 
 // api/cancel.js
-export async function cancelHandler(req, res) {
+export default async function cancelHandler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { transactionId } = req.body;
 
